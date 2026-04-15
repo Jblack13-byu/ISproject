@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Tic-Tac-Toe</title>
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --cell-bg: #2d2d2d;
+            --text: #ffffff;
+            --accent: #00ffcc;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 { margin-bottom: 10px; }
+
+        #status {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            height: 2rem;
+            color: var(--accent);
+        }
+
+        .game-container {
+            display: flex;
+            gap: 50px;
+            align-items: center;
+        }
+
+        /* Drag Source Area */
+        .piece-box {
+            width: 80px;
+            height: 80px;
+            border: 2px dashed var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .piece {
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
+            color: var(--accent);
+        }
+
+        /* The Board */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: var(--cell-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .cell.hover {
+            background-color: #444;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+    <h1>Tic-Tac-Toe</h1>
+    <div id="status">Your Turn! Drag the X</div>
+
+    <div class="game-container">
+        <div class="piece-box" id="source">
+            <div class="piece" id="dragX" draggable="true">X</div>
+        </div>
+
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+    </div>
+
+    <button onclick="resetGame()">Restart Game</button>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+        const dragX = document.getElementById('dragX');
+        const statusText = document.getElementById('status');
+        
+        let boardState = ["", "", "", "", "", "", "", "", ""];
+        let gameActive = true;
+
+        const winConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        // Drag and Drop Logic
+        dragX.addEventListener('dragstart', (e) => {
+            if(!gameActive) return;
+            e.dataTransfer.setData('text/plain', 'X');
+        });
+
+        cells.forEach(cell => {
+            cell.addEventListener('dragover', (e) => {
+                e.preventDefault(); // Necessary to allow drop
+                if (gameActive && !cell.innerText) cell.classList.add('hover');
+            });
+
+            cell.addEventListener('dragleave', () => cell.classList.remove('hover'));
+
+            cell.addEventListener('drop', (e) => {
+                e.preventDefault();
+                cell.classList.remove('hover');
+                const index = cell.getAttribute('data-index');
+
+                if (gameActive && boardState[index] === "") {
+                    makeMove(index, "X");
+                    if (gameActive) {
+                        setTimeout(computerMove, 500); // Computer plays after 0.5s
+                    }
+                }
+            });
+        });
+
+        function makeMove(index, player) {
+            boardState[index] = player;
+            cells[index].innerText = player;
+            cells[index].style.color = player === "X" ? "#00ffcc" : "#ff4444";
+            checkResult();
+        }
+
+        function computerMove() {
+            if (!gameActive) return;
+
+            // Simple AI: Pick a random empty spot
+            let emptyCells = boardState.map((val, idx) => val === "" ? idx : null).filter(val => val !== null);
+            
+            if (emptyCells.length > 0) {
+                const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                makeMove(randomIndex, "O");
+            }
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winner = "";
+
+            for (let condition of winConditions) {
+                const [a, b, c] = condition;
+                if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+                    roundWon = true;
+                    winner = boardState[a];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                if (winner === "X") {
+                    statusText.innerText = "Good Job!";
+                } else {
+                    statusText.innerText = "Ha Ha Looser!";
+                }
+                gameActive = false;
+                dragX.draggable = false;
+                return;
+            }
+
+            if (!boardState.includes("")) {
+                statusText.innerText = "It's a Draw. Try again!";
+                gameActive = false;
+            }
+        }
+
+        function resetGame() {
+            boardState = ["", "", "", "", "", "", "", "", ""];
+            gameActive = true;
+            statusText.innerText = "Your Turn! Drag the X";
+            dragX.draggable = true;
+            cells.forEach(cell => {
+                cell.innerText = "";
+                cell.classList.remove('hover');
+            });
+        }
+    </script>
+</body>
+</html>
